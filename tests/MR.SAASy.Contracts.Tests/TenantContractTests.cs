@@ -1,3 +1,4 @@
+using MR.SAASy.Contracts.Application;
 using MR.SAASy.Contracts.Tenant;
 using Xunit;
 
@@ -15,11 +16,12 @@ public sealed class TenantContractTests
 
         var binding = new TenantApplicationBinding(
             tenantId,
-            "workslip",
+            new ApplicationId("workslip"),
             externalReference,
             TenantApplicationBindingState.Planned);
 
         Assert.Equal("ten_mr_001", binding.TenantId.Value);
+        Assert.Equal("workslip", binding.ApplicationId.Value);
         Assert.Equal("workslip.organization", binding.ExternalTenantReference?.ReferenceType);
         Assert.NotEqual(binding.TenantId.Value, binding.ExternalTenantReference?.Value);
     }
@@ -43,7 +45,7 @@ public sealed class TenantContractTests
     {
         var binding = new TenantApplicationBinding(
             new TenantId("ten_mr_003"),
-            "future-product",
+            new ApplicationId("future-product"),
             ExternalTenantReference: null,
             TenantApplicationBindingState.Planned);
 

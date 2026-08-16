@@ -3,7 +3,7 @@ namespace MR.SAASy.Contracts.Application;
 public interface IApplicationRegistry
 {
     ValueTask<ApplicationDescriptor?> GetAsync(
-        string applicationId,
+        ApplicationId applicationId,
         ApplicationEnvironment environment,
         CancellationToken cancellationToken = default);
 }

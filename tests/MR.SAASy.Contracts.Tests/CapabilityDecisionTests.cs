@@ -1,3 +1,4 @@
+using MR.SAASy.Contracts.Application;
 using MR.SAASy.Contracts.Capabilities;
 using MR.SAASy.Contracts.Tenant;
 using Xunit;
@@ -7,6 +8,7 @@ namespace MR.SAASy.Contracts.Tests;
 public sealed class CapabilityDecisionTests
 {
     private static readonly TenantId Tenant = new("tenant-test");
+    private static readonly ApplicationId Application = new("workslip");
     private static readonly CapabilityKey Capability = new("workslip.time-tracking");
 
     [Theory]
@@ -17,7 +19,7 @@ public sealed class CapabilityDecisionTests
     {
         var decision = new CapabilityDecision(
             Tenant,
-            "workslip",
+            Application,
             Capability,
             state);
 
@@ -29,7 +31,7 @@ public sealed class CapabilityDecisionTests
     {
         var decision = new CapabilityDecision(
             Tenant,
-            "workslip",
+            Application,
             Capability,
             CapabilityDecisionState.Enabled,
             CapabilityGrantSource.Subscription);
@@ -43,13 +45,13 @@ public sealed class CapabilityDecisionTests
     {
         var decision = new CapabilityDecision(
             new TenantId("tenant-a"),
-            "workslip",
+            new ApplicationId("workslip"),
             new CapabilityKey("workslip.documents"),
             CapabilityDecisionState.Enabled,
             CapabilityGrantSource.Plan);
 
         Assert.Equal("tenant-a", decision.TenantId.Value);
-        Assert.Equal("workslip", decision.ApplicationId);
+        Assert.Equal("workslip", decision.ApplicationId.Value);
         Assert.Equal("workslip.documents", decision.CapabilityKey.Value);
     }
 }

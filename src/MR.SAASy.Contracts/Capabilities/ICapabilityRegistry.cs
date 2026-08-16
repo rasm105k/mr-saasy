@@ -1,3 +1,4 @@
+using MR.SAASy.Contracts.Application;
 using MR.SAASy.Contracts.Tenant;
 
 namespace MR.SAASy.Contracts.Capabilities;
@@ -10,7 +11,7 @@ public interface ICapabilityRegistry
 
     ValueTask<CapabilityDecision> ResolveAsync(
         TenantId tenantId,
-        string applicationId,
+        ApplicationId applicationId,
         CapabilityKey capabilityKey,
         CancellationToken cancellationToken = default);
 }
