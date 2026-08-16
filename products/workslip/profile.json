@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "0.1",
+  "applicationId": "workslip",
+  "displayName": "Workslip",
+  "repository": {
+    "provider": "github",
+    "fullName": "rasm105k/Workslip-v2.0",
+    "defaultBranch": "main"
+  },
+  "integration": {
+    "mode": "contract-package-and-product-adapter",
+    "status": "planned",
+    "writeAccessToProductRepository": false
+  },
+  "boundaries": {
+    "platformMayImportProductDomain": false,
+    "sharedDatabase": false,
+    "productOwnsAdapter": true
+  }
+}

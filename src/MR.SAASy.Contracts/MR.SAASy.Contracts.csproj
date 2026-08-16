@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>MR.SAASy.Contracts</AssemblyName>
+    <RootNamespace>MR.SAASy.Contracts</RootNamespace>
+    <PackageId>MR.SAASy.Contracts</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Provider-neutral contracts for MR SAAS'y and product consumers.</Description>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+</Project>

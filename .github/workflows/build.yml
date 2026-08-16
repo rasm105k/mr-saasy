@@ -1,0 +1,35 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore tests/MR.SAASy.Contracts.Tests/MR.SAASy.Contracts.Tests.csproj
+
+      - name: Test contracts
+        run: dotnet test tests/MR.SAASy.Contracts.Tests/MR.SAASy.Contracts.Tests.csproj --configuration Release --no-restore
+
+      - name: Pack contracts
+        run: dotnet pack src/MR.SAASy.Contracts/MR.SAASy.Contracts.csproj --configuration Release --output artifacts
+
+      - name: Upload contract package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mr-saasy-contracts
+          path: artifacts/*.nupkg
