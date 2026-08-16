@@ -16,7 +16,7 @@ public sealed class TenantContractTests
 
         var binding = new TenantApplicationBinding(
             tenantId,
-            new ApplicationId("workslip"),
+            new ApplicationIdentifier("workslip"),
             externalReference,
             TenantApplicationBindingState.Planned);
 
@@ -45,7 +45,7 @@ public sealed class TenantContractTests
     {
         var binding = new TenantApplicationBinding(
             new TenantId("ten_mr_003"),
-            new ApplicationId("future-product"),
+            new ApplicationIdentifier("future-product"),
             ExternalTenantReference: null,
             TenantApplicationBindingState.Planned);
 

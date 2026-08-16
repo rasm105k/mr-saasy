@@ -4,6 +4,6 @@ namespace MR.SAASy.Contracts.Tenant;
 
 public sealed record TenantApplicationBinding(
     TenantId TenantId,
-    ApplicationId ApplicationId,
+    ApplicationIdentifier ApplicationId,
     ExternalTenantReference? ExternalTenantReference,
     TenantApplicationBindingState State);

@@ -5,7 +5,7 @@ namespace MR.SAASy.Contracts.Capabilities;
 
 public sealed record CapabilityDecision(
     TenantId TenantId,
-    ApplicationId ApplicationId,
+    ApplicationIdentifier ApplicationId,
     CapabilityKey CapabilityKey,
     CapabilityDecisionState State,
     CapabilityGrantSource Source = CapabilityGrantSource.Unknown,

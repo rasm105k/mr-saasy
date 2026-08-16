@@ -8,7 +8,7 @@ namespace MR.SAASy.Contracts.Tests;
 public sealed class CapabilityDecisionTests
 {
     private static readonly TenantId Tenant = new("tenant-test");
-    private static readonly ApplicationId Application = new("workslip");
+    private static readonly ApplicationIdentifier Application = new("workslip");
     private static readonly CapabilityKey Capability = new("workslip.time-tracking");
 
     [Theory]
@@ -45,7 +45,7 @@ public sealed class CapabilityDecisionTests
     {
         var decision = new CapabilityDecision(
             new TenantId("tenant-a"),
-            new ApplicationId("workslip"),
+            new ApplicationIdentifier("workslip"),
             new CapabilityKey("workslip.documents"),
             CapabilityDecisionState.Enabled,
             CapabilityGrantSource.Plan);

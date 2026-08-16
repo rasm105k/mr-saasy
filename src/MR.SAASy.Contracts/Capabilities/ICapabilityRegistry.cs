@@ -11,7 +11,7 @@ public interface ICapabilityRegistry
 
     ValueTask<CapabilityDecision> ResolveAsync(
         TenantId tenantId,
-        ApplicationId applicationId,
+        ApplicationIdentifier applicationId,
         CapabilityKey capabilityKey,
         CancellationToken cancellationToken = default);
 }

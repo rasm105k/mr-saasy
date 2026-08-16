@@ -9,7 +9,7 @@ public sealed class ApplicationDescriptorTests
     public void Descriptor_is_product_neutral_and_stable()
     {
         var descriptor = new ApplicationDescriptor(
-            new ApplicationId("workslip"),
+            new ApplicationIdentifier("workslip"),
             "Workslip",
             "0.0.0-test",
             ApplicationEnvironment.Test);
@@ -22,7 +22,7 @@ public sealed class ApplicationDescriptorTests
     public void Same_contract_can_describe_a_second_product()
     {
         var descriptor = new ApplicationDescriptor(
-            new ApplicationId("synthetic-product"),
+            new ApplicationIdentifier("synthetic-product"),
             "Synthetic Product",
             "1.0.0",
             ApplicationEnvironment.Development);

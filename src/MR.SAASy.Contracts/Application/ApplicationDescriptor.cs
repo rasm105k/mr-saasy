@@ -1,7 +1,7 @@
 namespace MR.SAASy.Contracts.Application;
 
 public sealed record ApplicationDescriptor(
-    ApplicationId ApplicationId,
+    ApplicationIdentifier ApplicationId,
     string Name,
     string Version,
     ApplicationEnvironment Environment);
