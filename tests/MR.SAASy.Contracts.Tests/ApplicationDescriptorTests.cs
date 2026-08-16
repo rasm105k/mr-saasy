@@ -1,4 +1,5 @@
 using MR.SAASy.Contracts.Application;
+using Xunit;
 
 namespace MR.SAASy.Contracts.Tests;
 
