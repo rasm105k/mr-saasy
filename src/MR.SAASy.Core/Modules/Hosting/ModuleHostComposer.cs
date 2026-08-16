@@ -1,3 +1,4 @@
+using MR.SAASy.Contracts.Modules;
 using MR.SAASy.Contracts.Modules.Entitlements;
 using MR.SAASy.Contracts.Modules.Hosting;
 using MR.SAASy.Contracts.Tenant;
