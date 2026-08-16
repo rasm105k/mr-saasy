@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  contracts:
+  build-test-package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +19,17 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore
+      - name: Restore contract tests
         run: dotnet restore tests/MR.SAASy.Contracts.Tests/MR.SAASy.Contracts.Tests.csproj
 
       - name: Test contracts
         run: dotnet test tests/MR.SAASy.Contracts.Tests/MR.SAASy.Contracts.Tests.csproj --configuration Release --no-restore
+
+      - name: Restore core tests
+        run: dotnet restore tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj
+
+      - name: Test core
+        run: dotnet test tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj --configuration Release --no-restore
 
       - name: Pack contracts
         run: dotnet pack src/MR.SAASy.Contracts/MR.SAASy.Contracts.csproj --configuration Release --output artifacts

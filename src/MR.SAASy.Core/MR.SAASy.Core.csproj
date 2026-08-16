@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>MR.SAASy.Core</AssemblyName>
+    <RootNamespace>MR.SAASy.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MR.SAASy.Contracts/MR.SAASy.Contracts.csproj" />
+  </ItemGroup>
+</Project>
