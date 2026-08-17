@@ -13,6 +13,7 @@ Identity existence does not imply access. MR SAAS'y models authorization as expl
 - `AccessGrantSource`
 - `AccessGrantDecision`
 - `IAccessGrantResolver`
+- `IAccessGrantStore`
 
 ## Scopes
 
@@ -57,14 +58,23 @@ A grant records its source and may have an expiry timestamp. Identity lifecycle 
 
 An active identity with zero grants has zero access by default.
 
-## Next implementation layer
+## Implementation layer
 
-A provider-neutral access resolver will combine:
+`MR.SAASy.Core.Access.AccessGrantResolver` implements `IAccessGrantResolver`. It combines:
 
-- identity lifecycle
-- explicit grants
-- scope validation
-- expiry
-- role support/policy
+- identity lifecycle (`IIdentityDirectory`)
+- explicit grants (`IAccessGrantStore`)
+- scope completeness validation
+- grant expiry (via an injected `TimeProvider`)
+- exact scope + role matching
 
-and produce `AccessGrantDecision` without importing product authorization models or provider SDK types.
+and produces an `AccessGrantDecision` without importing product authorization models or provider SDK types.
+
+It is fail-closed:
+
+- an unregistered identity is `Unknown`;
+- a non-active identity, or a request with no matching unexpired grant, is `Denied`;
+- an invalid or incomplete scope combination is `Unsupported`;
+- only an active identity with a matching, unexpired grant is `Granted`.
+
+There is no implicit scope or role cascade: a grant authorizes only the exact scope and role it names, so a Platform grant does not satisfy a Tenant request and a grant for one tenant never satisfies another. Tenants stay isolated by default.
