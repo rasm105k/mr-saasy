@@ -46,9 +46,10 @@ The plan names **field keys only** — never values. The product owns its data a
 - No implicit authorization cascade across scope or role.
 - No product-domain or provider SDK imports in platform contracts or core (ADR-001, ADR-004). Product role → platform grant mapping is an explicit, reviewable adapter concern owned by the consumer.
 - Grant lifecycle and identity lifecycle are separate; an active identity with zero grants has zero access.
+- Every gateway request and decision is emitted to an `IAuditSink` as metadata only — identifiers, field names, decision state and reason — never customer field values.
 
 ## Consequences
-- The platform ships in-memory reference implementations (`InMemoryIdentityDirectory`, `InMemoryAccessGrantStore`, `CapabilityContextFieldPolicy`) for local/dev and tests; no persistence is introduced (ADR-004).
+- The platform ships in-memory reference implementations (`InMemoryIdentityDirectory`, `InMemoryAccessGrantStore`, `CapabilityContextFieldPolicy`, `InMemoryAuditSink`) for local/dev and tests; no persistence is introduced (ADR-004).
 - A concrete, product-owned adapter — mapping real product roles/identities to platform grants and supplying a real `IContextFieldPolicy` — remains a consumer-side (Workslip repo) task and is intentionally out of the platform.
 - The Executive/agent layers can rely on a single, testable authorization + minimization surface rather than each agent re-deriving access rules.
 
