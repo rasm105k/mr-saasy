@@ -24,5 +24,5 @@ public sealed record ContextProjectionPlan(
     /// never leaked by returning "granted" verbatim.
     /// </summary>
     public IReadOnlyCollection<ContextFieldKey> PlaintextFields =>
-        GrantedFields.Where(field => !MaskedFields.Contains(field)).ToArray();
+        GrantedFields.Where(key => !MaskedFields.Contains(key)).ToArray();
 }
