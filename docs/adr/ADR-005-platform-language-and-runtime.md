@@ -3,12 +3,15 @@
 ## Status
 Accepted
 
+Supersedes the Laravel control-plane bootstrap direction of Workslip `Docs/architecture/adr/0010-mr-saasy-control-plane-bootstrap-boundary.md`. ADR 0010's trust-boundary intent (provider/agent code must never reach persistence or product domain) still stands; only its choice of a Laravel/PHP runtime for the bootstrap is superseded here.
+
 ## Decision
 
 C#/.NET is the default language for the MR SAAS'y platform, and the `mr-saasy` repository is the platform of record.
 
 - New platform logic — contracts, policy, orchestration, registries — is written in C#/.NET in `mr-saasy`.
 - The PHP/Laravel control plane (Workslip repo, `platform/mr-saasy-control-plane`) is **superseded**. Its domain — role routing, executive hierarchy, and the access/context boundary — has been re-homed to C# (WOR-574, ADR 0004). It is not extended further; any remaining unique behaviour is ported to C# rather than added to Laravel.
+- The Laravel bootstrap that Workslip ADR 0010 placed under `platform/mr-saasy-control-plane` is therefore **not pursued in Laravel**. The control plane is bootstrapped in C#/.NET in `mr-saasy`, which keeps ADR 0010's own stated benefit intact — extraction to the platform repository stays a source move within one language rather than a cross-language redesign. ADR 0010's dependency-direction gates (provider/agent → contract → adapter, never persistence or product domain) remain required and are enforced in whichever runtime hosts the control plane.
 - The Python durable-execution runtime (Workslip repo, `platform/mr-saasy-agent-poc` — a Temporal workflow plus a Docker sandbox broker) is **retained as a polyglot runtime behind provider-neutral contracts**. It is not rewritten. Moving it to Temporal's .NET SDK is an explicit, separately-triggered future decision, not implied here.
 
 ## Reasoning
@@ -31,4 +34,5 @@ The durable-loop runtime is a different case. Temporal's durable execution and c
 
 - ADR-001 (separate platform repository), ADR-002 (contract-first)
 - `architecture/adr/0004-access-and-context-boundary.md`, Linear WOR-574
+- Supersedes (Laravel bootstrap only): Workslip `Docs/architecture/adr/0010-mr-saasy-control-plane-bootstrap-boundary.md` (WOR-573, WOR-579, WOR-582)
 - Superseded/retained prototype: `Workslip-v2.0` `platform/mr-saasy-control-plane` (PHP, superseded) and `platform/mr-saasy-agent-poc` (Python runtime, retained behind contracts)
