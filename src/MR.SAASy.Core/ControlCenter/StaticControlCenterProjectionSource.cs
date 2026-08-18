@@ -12,15 +12,18 @@ namespace MR.SAASy.Core.ControlCenter;
 public sealed class StaticControlCenterProjectionSource : IControlCenterProjectionSource
 {
     private readonly IReadOnlyDictionary<ApplicationEnvironment, ControlCenterProjection> _byEnvironment;
+    private readonly TimeProvider _timeProvider;
 
     public ApplicationIdentifier ApplicationId { get; }
 
     public StaticControlCenterProjectionSource(
         ApplicationIdentifier applicationId,
-        IEnumerable<ControlCenterProjection> projections)
+        IEnumerable<ControlCenterProjection> projections,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(projections);
         ApplicationId = applicationId;
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         var byEnvironment = new Dictionary<ApplicationEnvironment, ControlCenterProjection>();
         foreach (var projection in projections)
@@ -44,5 +47,5 @@ public sealed class StaticControlCenterProjectionSource : IControlCenterProjecti
         ValueTask.FromResult(
             _byEnvironment.TryGetValue(environment, out var projection)
                 ? projection
-                : ControlCenterProjection.Unknown(ApplicationId, environment, DateTimeOffset.UtcNow));
+                : ControlCenterProjection.Unknown(ApplicationId, environment, _timeProvider.GetUtcNow()));
 }

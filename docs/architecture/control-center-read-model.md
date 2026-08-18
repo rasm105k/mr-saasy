@@ -32,10 +32,12 @@ State is explicit and never coerced upward (ADR 0009):
 - `ObservationState`: `Unknown`, `Healthy`, `Degraded`, `Unhealthy`, `Blocked`, `Stale`
 - `AutomationRunState`: `Unknown`, `Queued`, `Running`, `Succeeded`, `Failed`, `Cancelled`, `Blocked`
 
-`Unknown`, `Blocked` and `Stale` are first-class. A missing source, an unreachable provider, or an
-observation older than its freshness window must never read as healthy or successful. A query for an
-application with no registered source returns an explicit `Unknown` projection — never `null` and
-never a healthy default — so one missing product cannot collapse unrelated Control Center state.
+`Unknown`, `Blocked` and `Stale` are first-class. A missing source or an unreachable provider must
+never read as healthy or successful: a query for an application with no registered source, and a
+source that throws or times out, both return an explicit `Unknown` projection — never `null` and
+never a healthy default — so one missing or broken product cannot collapse unrelated Control Center
+state. Staleness (an observation older than its freshness window) is enforced by applying the
+freshness policy below as a composition step, not by the aggregator itself.
 
 ## Evidence, not copies
 
@@ -58,10 +60,19 @@ stay in their owning systems.
 
 ## Freshness
 
-`ControlCenterFreshnessPolicy` is a pure, clock-injected policy that reclassifies an observation as
-`Stale` once it is older than a supplied maximum age. It never reinterprets `Unknown` or `Blocked`,
-and it never makes a stale observation look fresh. The current time is passed in rather than read
-from an ambient clock so the policy is deterministic and testable.
+`ControlCenterFreshnessPolicy` is a pure, clock-injected policy that reclassifies a *healthy*
+observation (health snapshot or deployment evidence) as `Stale` once it is older than a supplied
+maximum age. Known-bad states (`Unhealthy`, `Degraded`) keep their signal — ageing must not soften a
+red into a milder "needs refresh" — and `Unknown`/`Blocked`/`Stale` are never reinterpreted. The
+current time is passed in rather than read from an ambient clock so the policy is deterministic and
+testable.
+
+Freshness is a composable step, not part of aggregation: `InMemoryControlCenterReadModel` is a pure
+fan-out and does not impose a default window (it has no basis to pick one). The composition root or
+BFF applies `ControlCenterFreshnessPolicy` with its configured window over the projections the read
+model returns. The read model does read the injected clock for one thing only — the `RecordedAt` of
+the `Unknown` projections it synthesizes for missing/failed sources — via `TimeProvider` so that value
+is deterministic in tests.
 
 ## Reference implementation
 
