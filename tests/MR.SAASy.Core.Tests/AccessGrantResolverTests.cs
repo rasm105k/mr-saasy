@@ -131,6 +131,65 @@ public sealed class AccessGrantResolverTests
         Assert.Equal(AccessGrantDecisionState.Denied, decision.State);
     }
 
+    [Fact]
+    public async Task Denied_when_platform_grant_does_not_satisfy_a_tenant_request()
+    {
+        // The marquee "no scope cascade" invariant: a broad Platform grant must not authorize a narrower Tenant request.
+        var requestScope = new AccessScope(AccessScopeKind.Tenant, new ApplicationIdentifier("workslip"), new TenantId("tenant-a"));
+        var resolver = Resolver(
+            identity: ActiveIdentity(),
+            grants: [Grant(new AccessScope(AccessScopeKind.Platform), OperatorRole, AccessGrantSource.Policy)]);
+
+        var decision = await resolver.ResolveAsync(Subject, requestScope, OperatorRole);
+
+        Assert.Equal(AccessGrantDecisionState.Denied, decision.State);
+    }
+
+    [Fact]
+    public async Task Unsupported_when_application_scope_is_missing_its_application()
+    {
+        var resolver = Resolver(identity: ActiveIdentity(), grants: []);
+
+        var decision = await resolver.ResolveAsync(Subject, new AccessScope(AccessScopeKind.Application), OperatorRole);
+
+        Assert.Equal(AccessGrantDecisionState.Unsupported, decision.State);
+    }
+
+    [Fact]
+    public async Task Unsupported_when_environment_scope_is_missing_its_environment()
+    {
+        var scope = new AccessScope(AccessScopeKind.Environment, new ApplicationIdentifier("workslip"));
+        var resolver = Resolver(identity: ActiveIdentity(), grants: []);
+
+        var decision = await resolver.ResolveAsync(Subject, scope, OperatorRole);
+
+        Assert.Equal(AccessGrantDecisionState.Unsupported, decision.State);
+    }
+
+    [Fact]
+    public async Task Unsupported_when_platform_scope_carries_extra_selectors()
+    {
+        var scope = new AccessScope(AccessScopeKind.Platform, new ApplicationIdentifier("workslip"));
+        var resolver = Resolver(identity: ActiveIdentity(), grants: []);
+
+        var decision = await resolver.ResolveAsync(Subject, scope, OperatorRole);
+
+        Assert.Equal(AccessGrantDecisionState.Unsupported, decision.State);
+    }
+
+    [Fact]
+    public async Task Denied_when_matching_grant_expires_exactly_now()
+    {
+        var scope = new AccessScope(AccessScopeKind.Platform);
+        var resolver = Resolver(
+            identity: ActiveIdentity(),
+            grants: [Grant(scope, OperatorRole, AccessGrantSource.Manual, expiresAt: Now)]);
+
+        var decision = await resolver.ResolveAsync(Subject, scope, OperatorRole);
+
+        Assert.Equal(AccessGrantDecisionState.Denied, decision.State);
+    }
+
     private static AccessGrantResolver Resolver(
         IdentityDescriptor? identity,
         IReadOnlyCollection<AccessGrant> grants,
