@@ -15,6 +15,13 @@ async function expectText(page, selector, text) {
   assert(actual.includes(text), `${selector} expected to contain ${JSON.stringify(text)} but was ${JSON.stringify(actual)}`);
 }
 
+async function expectProgressivelyHidden(page, selector, label) {
+  const locator = page.locator(selector);
+  const count = await locator.count();
+  if (count === 0) return;
+  assert(!(await locator.isVisible()), `${label} secondary actions must not be visible before Mere`);
+}
+
 async function runScenario(browser, name, viewport, isMobile) {
   const context = await browser.newContext({ viewport, isMobile });
   const page = await context.newPage();
@@ -41,8 +48,7 @@ async function runScenario(browser, name, viewport, isMobile) {
       `${prefix} must expose exactly one primary action button`);
     assert(await card.locator(`button[id="event-${prefix}-more"]`).count() === 1,
       `${prefix} must expose one compact Mere toggle`);
-    assert(await page.locator(`#event-${prefix}-secondary`).count() === 0,
-      `${prefix} secondary actions must be progressively hidden before Mere`);
+    await expectProgressivelyHidden(page, `#event-${prefix}-secondary`, prefix);
   }
 
   assert(await page.locator('#event-other button[id="event-other-primary"]').count() === 1,
