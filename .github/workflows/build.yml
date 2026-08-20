@@ -31,6 +31,12 @@ jobs:
       - name: Test core
         run: dotnet test tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj --configuration Release --no-restore
 
+      - name: Test feature-flag off-path
+        run: >
+          dotnet test tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj
+          --configuration Release --no-restore --no-build
+          --filter Trait=OffPath
+
       - name: Pack contracts
         run: dotnet pack src/MR.SAASy.Contracts/MR.SAASy.Contracts.csproj --configuration Release --output artifacts
 
