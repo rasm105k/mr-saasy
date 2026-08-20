@@ -1,0 +1,260 @@
+name: WOR-737 Kimi Calendar FE
+
+on:
+  push:
+    branches:
+      - agent/wor-737-kimi-calendar-fe-orchestrator
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: wor-737-kimi-calendar-fe
+  cancel-in-progress: true
+
+jobs:
+  implement-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KIMI_API_KEY: ${{ secrets.KIMI_API_KEY || secrets.MOONSHOT_API_KEY }}
+      MOONSHOT_BASE_URL: https://api.moonshot.ai/v1
+      BASE_BRANCH: main
+      TARGET_BRANCH: kimi/wor-737-calendar-fe-${{ github.run_id }}
+      KIMI_TASK_CLASS: large_feature_ui
+      KIMI_MAX_REPAIR_PASSES: 2
+      WEB_URL: http://127.0.0.1:5099
+
+    steps:
+      - name: Checkout Kimi orchestrator
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Preserve bounded worker and browser proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .github/wor737/kimi_worker.py /tmp/kimi_worker.py
+          cp .github/wor737/calendar-flow.mjs /tmp/calendar-flow.mjs
+
+      - name: Resolve main base and strongest Kimi model
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${KIMI_API_KEY:-}" || { echo 'KIMI_API_KEY/MOONSHOT_API_KEY is unavailable in mr-saasy repository secrets'; exit 10; }
+          git fetch origin "$BASE_BRANCH"
+          base_sha="$(git rev-parse "origin/$BASE_BRANCH")"
+          response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 -H "Authorization: Bearer ${KIMI_API_KEY}" "${MOONSHOT_BASE_URL}/models")"
+          printf '%s' "$response" > /tmp/kimi-models.json
+          model="$(printf '%s' "$response" | jq -r '
+            [.data[].id | select(test("^kimi-"; "i"))] as $kimi |
+            (["kimi-k2.6", "kimi-k2.5", "kimi-k2", "kimi-k1.5"] | map(select(. as $p | $kimi | index($p))) | .[0]) //
+            ($kimi | sort_by(
+              capture("(?<major>[0-9]+)(?:\\.(?<minor>[0-9]+))?")? |
+              [(.major // "0" | tonumber), (.minor // "0" | tonumber)]
+            ) | reverse | .[0]) // empty')"
+          test -n "$model" || { echo 'No Kimi model available for large_feature_ui'; exit 11; }
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "model=$model" >> "$GITHUB_OUTPUT"
+          printf '{"task_class":"%s","base_branch":"%s","base_sha":"%s","selected_model":"%s","available_kimi_models":%s}\n' \
+            "$KIMI_TASK_CLASS" "$BASE_BRANCH" "$base_sha" "$model" "$(printf '%s' "$response" | jq -c '[.data[].id | select(test("^kimi-"; "i"))]')" \
+            > /tmp/kimi-model-selection.json
+          echo "Base $BASE_BRANCH@$base_sha; selected Kimi model $model"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Generate bounded calendar frontend with Kimi
+        env:
+          KIMI_MODEL: ${{ steps.resolve.outputs.model }}
+          KIMI_WORKER_MODE: generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch --detach "origin/$BASE_BRANCH"
+          python3 /tmp/kimi_worker.py
+
+      - name: Create isolated implementation branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
+            echo 'Attempt branch already exists; refusing to overwrite it.'
+            exit 20
+          fi
+          git switch --create "$TARGET_BRANCH" "origin/$BASE_BRANCH"
+          cp -a /tmp/wor737-files/. .
+          test -s src/MR.SAASy.Web/MR.SAASy.Web.csproj
+          changed="$(git status --porcelain=v1 | sed -E 's/^.. //' | sort -u)"
+          if printf '%s\n' "$changed" | grep -Ev '^src/MR\.SAASy\.Web/' | grep -q .; then
+            printf 'Unexpected generated scope:\n%s\n' "$changed"
+            exit 21
+          fi
+
+      - name: Build generated frontend with bounded Kimi repair
+        env:
+          KIMI_MODEL: ${{ steps.resolve.outputs.model }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          success=0
+          for pass in 0 1 2; do
+            cp -a /tmp/wor737-files/. .
+            if dotnet build src/MR.SAASy.Web/MR.SAASy.Web.csproj -c Release 2>&1 | tee /tmp/wor737-build.log; then
+              success=1
+              break
+            fi
+            if [ "$pass" -ge 2 ]; then
+              break
+            fi
+            echo "Build failed; asking Kimi for bounded repair pass $((pass + 1))."
+            KIMI_WORKER_MODE=repair \
+              KIMI_REPAIR_REASON_FILE=/tmp/wor737-build.log \
+              python3 /tmp/kimi_worker.py
+          done
+          test "$success" -eq 1 || { echo 'Generated frontend did not compile after bounded repairs.'; exit 30; }
+
+      - name: Test existing platform contracts/core
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet test tests/MR.SAASy.Contracts.Tests/MR.SAASy.Contracts.Tests.csproj -c Release
+          dotnet test tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj -c Release
+
+      - name: Setup ephemeral Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/wor737-playwright
+          cd /tmp/wor737-playwright
+          npm init -y >/dev/null
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium
+          cp /tmp/calendar-flow.mjs ./calendar-flow.mjs
+
+      - name: Run desktop/mobile click flows with one bounded UI repair
+        env:
+          KIMI_MODEL: ${{ steps.resolve.outputs.model }}
+          MR_SAASY_WEB_URL: ${{ env.WEB_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser_success=0
+          for pass in 0 1; do
+            cp -a /tmp/wor737-files/. .
+            dotnet build src/MR.SAASy.Web/MR.SAASy.Web.csproj -c Release >/tmp/wor737-rebuild.log 2>&1
+            dotnet run --project src/MR.SAASy.Web/MR.SAASy.Web.csproj -c Release --no-build --urls "$WEB_URL" >/tmp/wor737-web.log 2>&1 &
+            server_pid=$!
+            cleanup() { kill "$server_pid" >/dev/null 2>&1 || true; wait "$server_pid" >/dev/null 2>&1 || true; }
+            ready=0
+            for _ in $(seq 1 60); do
+              if curl --fail --silent "$WEB_URL/calendar" >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" -ne 1 ]; then
+              cat /tmp/wor737-web.log
+              cleanup
+              echo 'MR SAASy web app did not become ready.' | tee /tmp/wor737-browser.log
+            elif (cd /tmp/wor737-playwright && node calendar-flow.mjs) 2>&1 | tee /tmp/wor737-browser.log; then
+              cleanup
+              browser_success=1
+              break
+            else
+              cleanup
+            fi
+
+            if [ "$pass" -ge 1 ]; then
+              break
+            fi
+            {
+              echo 'Browser click-flow failure:'
+              cat /tmp/wor737-browser.log
+              echo
+              echo 'Server log:'
+              tail -n 300 /tmp/wor737-web.log
+            } > /tmp/wor737-browser-repair.txt
+            echo 'Browser proof failed; asking Kimi for one bounded UI repair.'
+            KIMI_WORKER_MODE=repair \
+              KIMI_REPAIR_REASON_FILE=/tmp/wor737-browser-repair.txt \
+              python3 /tmp/kimi_worker.py
+          done
+          test "$browser_success" -eq 1 || { echo 'Desktop/mobile browser proof failed after bounded repair.'; exit 40; }
+
+      - name: Validate final generated scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a /tmp/wor737-files/. .
+          dotnet build src/MR.SAASy.Web/MR.SAASy.Web.csproj -c Release
+          changed="$(git status --porcelain=v1 | sed -E 's/^.. //' | sort -u)"
+          test -n "$changed" || { echo 'Kimi produced no implementation changes.'; exit 50; }
+          if printf '%s\n' "$changed" | grep -Ev '^src/MR\.SAASy\.Web/' | grep -q .; then
+            printf 'Unexpected final scope:\n%s\n' "$changed"
+            exit 51
+          fi
+          printf '%s\n' "$changed" > /tmp/wor737-changed-files.txt
+
+      - name: Commit and push exact Kimi implementation head
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kimi Worker'
+          git config user.email 'kimi-worker@users.noreply.github.com'
+          git add src/MR.SAASy.Web
+          git commit -m 'WOR-737: add action-first calendar frontend foundation'
+          sha="$(git rev-parse HEAD)"
+          git push --set-upstream origin "$TARGET_BRANCH"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Independent Kimi exact-head reviews
+        env:
+          KIMI_MODEL: ${{ steps.resolve.outputs.model }}
+          KIMI_WORKER_MODE: review
+          BASE_SHA: ${{ steps.resolve.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.commit.outputs.sha }}
+        shell: bash
+        run: python3 /tmp/kimi_worker.py
+
+      - name: Open draft PR to main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ steps.resolve.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.commit.outputs.sha }}
+          KIMI_MODEL: ${{ steps.resolve.outputs.model }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          summary="$(jq -r '.summary // ""' /tmp/kimi-implementation.json)"
+          reviews="$(jq -r 'map("- " + .role + ": " + .verdict + " — " + (.summary // "")) | join("\n")' /tmp/kimi-reviews.json)"
+          body="WOR-737 (parent WOR-735) frontend slice generated by the bounded Kimi runtime.\n\nBase: ${BASE_BRANCH}@${BASE_SHA}\nExact head: ${HEAD_SHA}\nSelected model: ${KIMI_MODEL}\n\nScope: first MR SAASy Blazor web shell + calendar/action UI only. No backend, persistence, auth, provider integration or real email sending.\n\nUX contract: minimal noise, exactly one dominant primary action per event, optional actions behind 'Mere', compact Danish copy, mobile bottom-nav safe-area handling.\n\nKimi implementation summary: ${summary}\n\nValidation before push:\n- generated .NET 10 web project compiled\n- existing MR SAASy contract/core tests passed\n- authenticated/provider-free UI click proof ran on desktop 1440x900 and mobile 390x844\n- page errors: 0\n- console errors: 0\n- horizontal overflow: 0\n- mobile action-vs-bottom-nav overlap check passed\n\nIndependent exact-head Kimi reviews:\n${reviews}\n\nHuman visual/product review remains required before merge.\n\nLinear: WOR-737 / WOR-735"
+          gh pr create --base "$BASE_BRANCH" --head "$TARGET_BRANCH" --title 'WOR-737: Kimi calendar/action FE foundation' --body "$body" --draft
+
+      - name: Upload Kimi and browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wor737-kimi-calendar-fe-evidence-${{ github.run_id }}
+          path: |
+            /tmp/kimi-implementation.json
+            /tmp/kimi-repair.json
+            /tmp/kimi-reviews.json
+            /tmp/kimi-model-selection.json
+            /tmp/kimi-models.json
+            /tmp/wor737-build.log
+            /tmp/wor737-browser.log
+            /tmp/wor737-browser-evidence.json
+            /tmp/wor737-desktop.png
+            /tmp/wor737-mobile.png
+            /tmp/wor737.diff
+            /tmp/wor737-changed-files.txt
+          if-no-files-found: warn
