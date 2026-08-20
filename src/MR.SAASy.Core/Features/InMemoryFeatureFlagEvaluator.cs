@@ -6,8 +6,8 @@ using MR.SAASy.Contracts.Tenant;
 namespace MR.SAASy.Core.Features;
 
 /// <summary>
-/// Fail-closed evaluator. Platform kill wins. Then identity, tenant, application.
-/// Unseeded flags stay off.
+/// Experiment/ops flags. Capabilities stay the durable entitlement model.
+/// Kill wins. Then identity, tenant, application. Unseeded stays off.
 /// </summary>
 public sealed class InMemoryFeatureFlagEvaluator : IFeatureFlagEvaluator
 {
@@ -29,7 +29,7 @@ public sealed class InMemoryFeatureFlagEvaluator : IFeatureFlagEvaluator
 
         foreach (var assignment in assignments)
         {
-            if (assignment.State == FeatureFlagState.Killed || assignment.Source == FeatureFlagSource.PlatformKill)
+            if (assignment.Source == FeatureFlagSource.PlatformKill)
             {
                 _killed.Add(assignment.Flag);
                 continue;
@@ -65,7 +65,7 @@ public sealed class InMemoryFeatureFlagEvaluator : IFeatureFlagEvaluator
         {
             return ValueTask.FromResult(new FeatureFlagDecision(
                 query.Flag,
-                FeatureFlagState.Killed,
+                FeatureFlagState.Off,
                 FeatureFlagSource.PlatformKill,
                 "Platform kill switch."));
         }
@@ -73,23 +73,23 @@ public sealed class InMemoryFeatureFlagEvaluator : IFeatureFlagEvaluator
         if (query.IdentityId is { } identityId &&
             _identity.TryGetValue((query.Flag, identityId), out var identityState))
         {
-            return ValueTask.FromResult(Decision(query.Flag, identityState, FeatureFlagSource.Identity));
+            return ValueTask.FromResult(new FeatureFlagDecision(query.Flag, identityState, FeatureFlagSource.Identity));
         }
 
         if (query.TenantId is { } tenantId &&
             _tenant.TryGetValue((query.Flag, tenantId), out var tenantState))
         {
-            return ValueTask.FromResult(Decision(query.Flag, tenantState, FeatureFlagSource.Tenant));
+            return ValueTask.FromResult(new FeatureFlagDecision(query.Flag, tenantState, FeatureFlagSource.Tenant));
         }
 
         if (_application.TryGetValue((query.Flag, query.ApplicationId), out var applicationState))
         {
-            return ValueTask.FromResult(Decision(query.Flag, applicationState, FeatureFlagSource.Application));
+            return ValueTask.FromResult(new FeatureFlagDecision(query.Flag, applicationState, FeatureFlagSource.Application));
         }
 
         if (_platform.TryGetValue(query.Flag, out var platformState))
         {
-            return ValueTask.FromResult(Decision(query.Flag, platformState, FeatureFlagSource.DefaultOff));
+            return ValueTask.FromResult(new FeatureFlagDecision(query.Flag, platformState, FeatureFlagSource.DefaultOff));
         }
 
         return ValueTask.FromResult(new FeatureFlagDecision(
@@ -98,10 +98,4 @@ public sealed class InMemoryFeatureFlagEvaluator : IFeatureFlagEvaluator
             FeatureFlagSource.DefaultOff,
             "Unconfigured flags stay off."));
     }
-
-    private static FeatureFlagDecision Decision(
-        FeatureFlagKey flag,
-        FeatureFlagState state,
-        FeatureFlagSource source) =>
-        new(flag, state, source);
 }

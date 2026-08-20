@@ -15,6 +15,7 @@ public sealed class InMemoryFeatureFlagEvaluatorTests
     private static readonly IdentityId UserA = new("user-a");
 
     [Fact]
+    [Trait("Trait", "OffPath")]
     public async Task Unseeded_flag_is_off()
     {
         var evaluator = new InMemoryFeatureFlagEvaluator([]);
@@ -26,22 +27,23 @@ public sealed class InMemoryFeatureFlagEvaluatorTests
     }
 
     [Fact]
+    [Trait("Trait", "OffPath")]
     public async Task Platform_kill_beats_identity_on()
     {
         var evaluator = new InMemoryFeatureFlagEvaluator(
         [
-            new FeatureFlagAssignment(Help, FeatureFlagState.Killed, FeatureFlagSource.PlatformKill),
+            new FeatureFlagAssignment(Help, FeatureFlagState.Off, FeatureFlagSource.PlatformKill),
             new FeatureFlagAssignment(Help, FeatureFlagState.On, FeatureFlagSource.Identity, IdentityId: UserA)
         ]);
 
         var decision = await evaluator.EvaluateAsync(new FeatureFlagQuery(Help, Workslip, TenantA, UserA));
 
         Assert.False(decision.IsEnabled);
-        Assert.Equal(FeatureFlagState.Killed, decision.State);
         Assert.Equal(FeatureFlagSource.PlatformKill, decision.Source);
     }
 
     [Fact]
+    [Trait("Trait", "OffPath")]
     public async Task Identity_can_turn_an_application_flag_off()
     {
         var evaluator = new InMemoryFeatureFlagEvaluator(
