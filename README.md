@@ -9,6 +9,8 @@ The platform provides shared capabilities for MR Software SaaS products:
 - application and tenant registry
 - identity and access
 - module capabilities and entitlements
+- feature flags and kill switches
+- shared help assistant catalog
 - secrets and configuration governance
 - audit and compliance
 - operations and release evidence
@@ -56,6 +58,16 @@ docs/
 ```
 
 ## Foundation
+## Feature flags
+
+`IFeatureFlagEvaluator` is the shared kill switch for experimental features across products.
+
+- Default off.
+- Platform kill beats tenant, identity and application.
+- First shared flag: `platform.help-wizard`.
+- Help copy lives in `IHelpCatalog` so Workslip and later services can reuse the same assistant.
+
+## Foundation v0.1
 
 Implemented so far — contract-first in `MR.SAASy.Contracts`, with provider-neutral in-memory reference implementations and tests in `MR.SAASy.Core` / `MR.SAASy.Core.Tests`, and no persistence:
 
@@ -69,5 +81,6 @@ No database, Azure dependency, Keeper dependency, product adapter or Workslip co
 
 ```bash
 dotnet test tests/MR.SAASy.Contracts.Tests/MR.SAASy.Contracts.Tests.csproj -c Release
+dotnet test tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj -c Release
 dotnet pack src/MR.SAASy.Contracts/MR.SAASy.Contracts.csproj -c Release
 ```
