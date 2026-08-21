@@ -1,7 +1,7 @@
 # ADR 0004 — Access & Context Boundary
 
 ## Status
-Proposed
+Accepted
 
 Implemented in `rasm105k/mr-saasy` PR #1 (WOR-574). Supersedes the earlier PHP prototype parked in `Workslip-v2.0` PR #767 (loop work belongs in the platform repo per ADR-001).
 
@@ -35,7 +35,7 @@ There is **no implicit scope or role cascade**: a grant authorizes only the exac
 ### 2. Context shaping — `IContextProjectionResolver`
 Given a capability and the fields an agent requested, `ContextProjectionResolver` returns a `ContextProjectionPlan`: `granted = requested ∩ permitted`, `masked = granted ∩ policy.masked`, `denied = the remainder`. An unknown capability grants nothing. Permitted/masked field sets come from `IContextFieldPolicy`.
 
-The plan names **field keys only** — never values. The product owns its data and applies the plan (return granted fields, mask the masked subset, omit denied). No customer value ever enters the platform.
+The plan names **field keys only** — never values. The product owns its data and applies the plan (return granted fields, mask the masked subset, omit denied). No customer value ever enters the platform. The plan also exposes `PlaintextFields` (granted minus masked) as the set that is safe to return as raw values, so a consumer never leaks masked fields by returning "granted" verbatim.
 
 ### 3. Composition — `IAgentContextGateway`
 `AgentContextGateway` is the single boundary an agent crosses. It authorizes first; **only on a `Granted` decision** does it resolve the projection plan. A denied request yields no field plan and never invokes the projector.
@@ -46,6 +46,7 @@ The plan names **field keys only** — never values. The product owns its data a
 - No implicit authorization cascade across scope or role.
 - No product-domain or provider SDK imports in platform contracts or core (ADR-001, ADR-004). Product role → platform grant mapping is an explicit, reviewable adapter concern owned by the consumer.
 - Grant lifecycle and identity lifecycle are separate; an active identity with zero grants has zero access.
+- Each decision enum's default (0) value is a non-authorizing state, so a default-initialized decision never authorizes.
 - Every gateway request and decision is emitted to an `IAuditSink` as metadata only — identifiers, field names, decision state and reason — never customer field values.
 
 ## Consequences

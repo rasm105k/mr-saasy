@@ -61,6 +61,16 @@ public sealed class ContextProjectionResolverTests
         Assert.Empty(plan.DeniedFields);
     }
 
+    [Fact]
+    public void Plaintext_fields_exclude_masked_fields()
+    {
+        var plan = Resolver().Resolve(Capability, new[] { DisplayName, Email });
+
+        Assert.Equal(new[] { DisplayName, Email }, plan.GrantedFields);
+        Assert.Equal(new[] { DisplayName }, plan.PlaintextFields);
+        Assert.Equal(new[] { Email }, plan.MaskedFields);
+    }
+
     private static ContextProjectionResolver Resolver() =>
         new(new CapabilityContextFieldPolicy(
             new Dictionary<CapabilityKey, CapabilityContextFieldPolicy.CapabilityFields>

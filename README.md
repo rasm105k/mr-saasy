@@ -39,8 +39,8 @@ Workslip is registered as the first planned consumer in `products/workslip/profi
 ```text
 src/
   MR.SAASy.Contracts/          # stable provider-neutral contracts
-  MR.SAASy.Core/               # future orchestration/policy
-  MR.SAASy.ApplicationRegistry/# first implementation slice
+  MR.SAASy.Core/               # orchestration/policy + in-memory reference implementations
+  MR.SAASy.ApplicationRegistry/# placeholder (no code yet; the reference impl lives in MR.SAASy.Core)
 
 tests/
   MR.SAASy.Contracts.Tests/
@@ -50,13 +50,14 @@ products/
   workslip/profile.json        # planned consumer metadata only
 
 docs/
-  architecture/
-  adr/
+  architecture/                # overview + numbered architecture ADRs (0002–0004)
+  adr/                         # platform ADRs (ADR-001–005)
 
 .github/workflows/
-  build.yml
+  build.yml                    # builds + tests both test projects (csproj-driven; no .sln)
 ```
 
+## Foundation
 ## Feature flags
 
 `IFeatureFlagEvaluator` is the shared kill switch for experimental features across products.
@@ -68,13 +69,13 @@ docs/
 
 ## Foundation v0.1
 
-The first executable boundary is the Application Registry contract:
+Implemented so far — contract-first in `MR.SAASy.Contracts`, with provider-neutral in-memory reference implementations and tests in `MR.SAASy.Core` / `MR.SAASy.Core.Tests`, and no persistence:
 
-- `ApplicationDescriptor`
-- `ApplicationEnvironment`
-- `IApplicationRegistry`
+- application, tenant, capability and module registries (contracts + `InMemory*` reference implementations);
+- the access & context boundary (ADR 0004): `AccessGrantResolver`, context projection (minimization + masking), the `AgentContextGateway`, and audit emission;
+- an end-to-end composition test wiring the whole platform from reference parts.
 
-No database, Azure dependency, Keeper dependency, product adapter or Workslip code is part of v0.1.
+No database, Azure dependency, Keeper dependency, product adapter or Workslip code is part of this foundation.
 
 ## Build
 

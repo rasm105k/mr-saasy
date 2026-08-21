@@ -15,4 +15,14 @@ public sealed record ContextProjectionPlan(
     CapabilityKey Capability,
     IReadOnlyCollection<ContextFieldKey> GrantedFields,
     IReadOnlyCollection<ContextFieldKey> MaskedFields,
-    IReadOnlyCollection<ContextFieldKey> DeniedFields);
+    IReadOnlyCollection<ContextFieldKey> DeniedFields)
+{
+    /// <summary>
+    /// Granted fields that are not masked — i.e. <see cref="GrantedFields"/> minus
+    /// <see cref="MaskedFields"/>. This is the set a product may safely return as raw values;
+    /// prefer it over <see cref="GrantedFields"/> when emitting plaintext, so masked fields are
+    /// never leaked by returning "granted" verbatim.
+    /// </summary>
+    public IReadOnlyCollection<ContextFieldKey> PlaintextFields =>
+        GrantedFields.Where(key => !MaskedFields.Contains(key)).ToArray();
+}
