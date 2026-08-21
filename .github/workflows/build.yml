@@ -31,6 +31,17 @@ jobs:
       - name: Test core
         run: dotnet test tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj --configuration Release --no-restore
 
+      - name: Restore integration contract tests
+        run: dotnet restore tests/MR.SAASy.Integration.Tests/MR.SAASy.Integration.Tests.csproj
+
+      - name: Test integration contracts
+        run: dotnet test tests/MR.SAASy.Integration.Tests/MR.SAASy.Integration.Tests.csproj --configuration Release --no-restore
+
+      - uses: azure/setup-bicep@v2
+
+      - name: Validate MOTOR Bicep compilation
+        run: bicep build infrastructure/bicep/main.bicep --stdout > /dev/null
+
       - name: Pack contracts
         run: dotnet pack src/MR.SAASy.Contracts/MR.SAASy.Contracts.csproj --configuration Release --output artifacts
 

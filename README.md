@@ -42,19 +42,25 @@ src/
   MR.SAASy.Core/               # orchestration/policy + in-memory reference implementations
   MR.SAASy.ApplicationRegistry/# placeholder (no code yet; the reference impl lives in MR.SAASy.Core)
 
+  # MOTOR is bounded inside Contracts/Core under Motor/; it is not a provider SDK layer.
+
 tests/
   MR.SAASy.Contracts.Tests/
   MR.SAASy.Core.Tests/
+  MR.SAASy.Integration.Tests/  # executable MCP adapter contract skeletons
+
+infrastructure/
+  bicep/                       # opt-in identity/security/messaging/monitoring/data modules
 
 products/
   workslip/profile.json        # planned consumer metadata only
 
 docs/
-  architecture/                # overview + numbered architecture ADRs (0002–0004)
-  adr/                         # platform ADRs (ADR-001–005)
+  architecture/                # overview + numbered architecture ADRs (0002–0005)
+  adr/                         # platform ADRs (ADR-001–006)
 
 .github/workflows/
-  build.yml                    # builds + tests both test projects (csproj-driven; no .sln)
+  build.yml                    # builds/tests three projects + validates Bicep (no .sln)
 ```
 
 ## Foundation
@@ -77,10 +83,26 @@ Implemented so far — contract-first in `MR.SAASy.Contracts`, with provider-neu
 
 No database, Azure dependency, Keeper dependency, product adapter or Workslip code is part of this foundation.
 
+## MOTOR-001 — First Living Engine foundation
+
+MOTOR is the event-oriented orchestration engine inside MR SAAS'y. MOTOR-001 adds:
+
+- missions, agents, model selections, tool calls, approvals and learning contracts;
+- the Gordon, Forge, QA, Cleanup Guardian, Security Guardian and Data Guardian registry;
+- quality-first model routing with OpenCode ZEN as the logical code target;
+- versioned events and a provider-neutral JSON envelope;
+- a fail-closed MCP Gateway and connector targets for Azure, GitHub, Linear and Workslip;
+- append-only reference memory for decisions, solutions, performance and business impact;
+- a pure safe-deployment gate and disabled-by-default Bicep modules.
+
+There are no live provider calls, production persistence or deployment execution in this
+milestone. See `docs/architecture/motor-v1-foundation.md` and ADR 0005.
+
 ## Build
 
 ```bash
 dotnet test tests/MR.SAASy.Contracts.Tests/MR.SAASy.Contracts.Tests.csproj -c Release
 dotnet test tests/MR.SAASy.Core.Tests/MR.SAASy.Core.Tests.csproj -c Release
+dotnet test tests/MR.SAASy.Integration.Tests/MR.SAASy.Integration.Tests.csproj -c Release
 dotnet pack src/MR.SAASy.Contracts/MR.SAASy.Contracts.csproj -c Release
 ```
