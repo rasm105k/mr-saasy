@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+env:
+  BICEP_VERSION: 'v0.46.1'
+  BICEP_SHA256: '3e011d629ea4311b7a7dd8f0040ab2b1a072ea4ff5d02cb75e0e55a9a6703fb9'
+
 jobs:
   build-test-package:
     runs-on: ubuntu-latest
@@ -37,10 +41,16 @@ jobs:
       - name: Test integration contracts
         run: dotnet test tests/MR.SAASy.Integration.Tests/MR.SAASy.Integration.Tests.csproj --configuration Release --no-restore
 
-      - uses: azure/setup-bicep@v2
+      - name: Install Bicep CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            --output /tmp/bicep \
+            "https://github.com/Azure/bicep/releases/download/${BICEP_VERSION}/bicep-linux-x64"
+          echo "${BICEP_SHA256}  /tmp/bicep" | sha256sum --check
+          chmod +x /tmp/bicep
 
       - name: Validate MOTOR Bicep compilation
-        run: bicep build infrastructure/bicep/main.bicep --stdout > /dev/null
+        run: /tmp/bicep build infrastructure/bicep/main.bicep --stdout --no-restore > /dev/null
 
       - name: Pack contracts
         run: dotnet pack src/MR.SAASy.Contracts/MR.SAASy.Contracts.csproj --configuration Release --output artifacts
